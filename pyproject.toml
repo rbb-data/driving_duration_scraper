@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "driving_time_scraper"
+version = "0.1.0"
+description = ""
+authors = ["heyarne <hi@arnes.space>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+Scrapy = "^2.4.1"
+shub = "^2.13.0"
+
+[tool.poetry.dev-dependencies]
+ipython = "^7.22.0"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
