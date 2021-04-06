@@ -18,14 +18,14 @@ The scraper works by providing the paths of two CSV files when invoking it. It w
 
 We need two CSV files, each **require** the fields `lat` and `lng`. Any other field will be kept around but is not required.
 
-`sources.csv`:
+`examples/sources.csv`:
 
 ```
 id,lat,lng,name
 1,52.5033,13.3848,Berlin
 ```
 
-`destinations.csv`
+`examples/destinations.csv`
 
 ```
 id,lat,lng,name
@@ -37,8 +37,8 @@ Invocation:
 ``` bash
 poetry run scrapy crawl OpenRouteService \
   -a api_key=YOUR_API_TOKEN \
-  -a source_csv=sources.csv \
-  -a destination_csv=destinations.csv \
+  -a source_csv=examples/sources.csv \
+  -a destination_csv=examples/destinations.csv \
   -o output.json
 ```
 
@@ -122,3 +122,40 @@ Read the comments below that aim to help understanding the result:
 ## VBB-Rest
 
 - https://v5.vbb.transport.rest/
+
+### Usage
+
+The VBB Rest API needs stop ids to calculate trips. These are provided, as above, in a designated row of the input and output CSV files. If your CSV contains only `lat` and `lng`, you can call `VbbRestStopIds` to fetch the closest stop for you.
+
+Given the same `source.csv` as above:
+
+``` bash
+poetry run scrapy crawl VbbRestStopIds \
+  -a source_csv=examples/sources.csv \
+  -o source_stops.csv
+```
+
+Results in the following CSV:
+
+```
+id,lat,lng,name,stop_id,stop_name,stop_lat,stop_lng,stop_distance,stop_products
+1,52.5033,13.3848,Berlin,900000012101,S Anhalter Bahnhof,52.504537,13.38208,230,"suburban,bus"
+```
+
+You can also tell the scraper to exclude some transit types (separated with `,`) when considering the closest stop. Available transit types are `suburban`, `subway`, `tram`, `bus`, `ferry`, `express` and `regional`:
+
+``` bash
+poetry run scrapy crawl VbbRestStopIds \
+  -a source_csv=sources.csv \
+  -a excluded_products=suburban,bus \
+  -o source_stops.csv
+```
+
+Results in the following result, because Möckernbrücke offers a subway:
+
+```
+id,lat,lng,name,stop_id,stop_name,stop_lat,stop_lng,stop_distance,stop_products
+1,52.5033,13.3848,Berlin,900000017104,U Möckernbrücke,52.498945,13.383257,495,"subway,bus"
+```
+
+**TODO:** Driving time calculation
