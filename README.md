@@ -12,6 +12,8 @@ To use this scraper:
 
 ## OpenRouteService
 
+OpenRouteService can perform different kinds of distance calculations if you are looking to estimate distances by car, by foot, in a wheelchair, or by bike. If you need public transit, see the section on VbbRest below.
+
 The scraper works by providing the paths of two CSV files when invoking it. It will build the cartesian product of all items in the two files and return routing information from [OpenRouteService](https://openrouteservice.org/).
 
 ### Usage
@@ -44,7 +46,7 @@ poetry run scrapy crawl OpenRouteService \
 
 The `api_key` can be copy-and-pasted from the OpenRouteService UI. The two CSV files are the paths given above. `-o output.json` determines the name and format of the file that stores all scraper results.
 
-You can also pass `-a profile=...` to customize the way the driving duration and distance are calculated (more in the [api documentation](https://openrouteservice.org/dev/#/api-docs/v2/directions/{profile}/get)).
+You can also pass `-a profile=...` to customize the way the driving duration and distance are calculated (more in the [api documentation](https://openrouteservice.org/dev/#/api-docs/v2/directions/{profile}/get)). Interesting profiles might be `driving-car`, `cycling-regular`, `wheelchair` or `foot-walking`.
 
 The response is an array of GeoJSON features. Each feature represents one trip. The most important properties are `properties.summary`, `properties.source` and `properties.destination`.
 
