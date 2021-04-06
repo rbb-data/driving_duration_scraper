@@ -7,7 +7,7 @@ let
   };
 in pkgs.mkShell {
   buildInputs = [
-    pythonEnv
+    pkgs.python38
     pkgs.python38Packages.poetry
   ];
 }
