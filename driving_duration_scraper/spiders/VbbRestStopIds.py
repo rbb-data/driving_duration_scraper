@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 
 def validate_csv_fields(row):
     keys = row.keys()
-    return ('lat' in keys and 'lng' in keys) or 'stop_id' in keys
+    return 'lat' in keys and 'lng' in keys
 
 def read_csv(file):
     with open(file) as f:
@@ -14,9 +14,8 @@ def read_csv(file):
         rows = [row for row in reader]
         if not rows:
             raise ValueError('The provided CSV file is empty')
-
         if not validate_csv_fields(rows[0]):
-            raise ValueError('Make sure the provided CSV file contains the either columns `lat` and `lng` or `stop_id`')
+            raise ValueError('Make sure the provided CSV file contains the either columns `lat` and `lng`')
         return rows
 
 class VbbRestStopIdsSpider(scrapy.Spider):
