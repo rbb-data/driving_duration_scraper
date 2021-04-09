@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 
 def validate_csv_fields(row):
     keys = row.keys()
-    return 'lat' in keys and 'lng' in keys
+    return 'lat' in keys and 'lng' and 'address' in keys
 
 def read_csv(file):
     with open(file) as f:
@@ -15,7 +15,7 @@ def read_csv(file):
         if not rows:
             raise ValueError('The provided CSV file is empty')
         if not validate_csv_fields(rows[0]):
-            raise ValueError('Make sure the provided CSV file contains the either columns `lat` and `lng`')
+            raise ValueError('Make sure the provided CSV file contains the columns `lat` and `lng` and `address` (for example the city name)')
         return rows
 
 class VbbRestStopIdsSpider(scrapy.Spider):
@@ -39,29 +39,39 @@ class VbbRestStopIdsSpider(scrapy.Spider):
         # this is where we build the cartesian product of source and dest and
         # construct all requests. what we need is a stop_id for source and dest.
         for source in self.sources:
-            yield scrapy.Request(self.api_url + 'stops/nearby?'  + urlencode({
+            request_params = {
+                'address': source.get('address'),
                 'latitude': source.get('lat'),
-                'longitude': source.get('lng'),
-                'results': 15
-            }), callback=self.handle_stop_id, cb_kwargs={'location': source})
+                'longitude': source.get('lng')
+            }
 
-    def handle_stop_id(self, response, location):
-        # see https://v5.vbb.transport.rest/api.html#get-stopsnearby
-        # we take the closest stop that offers any of the products that are not excluded
-        for stop in json.loads(response.text):
-            products = [availability for offer, availability in stop['products'].items() if offer not in self.excluded_products]
-            if not any(products):
-                continue
+            for product in self.excluded_products:
+                request_params[product] = False
 
-            location.update(**{
-                'stop_id': stop['id'],
-                'stop_name': stop['name'],
-                'stop_lat': stop['location']['latitude'],
-                'stop_lng': stop['location']['longitude'],
-                'stop_distance': stop['distance'],
-                'stop_products': ','.join([product for product, is_offered in stop['products'].items() if is_offered])
-            })
-            break
+            yield scrapy.Request(self.api_url + 'stops/reachable-from?'  + urlencode(request_params),
+                                 callback=self.handle_stops,
+                                 cb_kwargs={'location': source})
+
+    def handle_stops(self, response, location):
+        # see https://v5.vbb.transport.rest/api.html#get-stopsreachable-from
+        body = json.loads(response.text)
+
+        # these are grouped by duration
+        for item in body:
+            for stop in item['stations']:
+                location.update(**{
+                    'stop_id': stop['id'],
+                    'stop_duration': item['duration'],
+                    'stop_name': stop['name'],
+                    'stop_lat': stop['location']['latitude'],
+                    'stop_lng': stop['location']['longitude'],
+                    'stop_products': ','.join([product for product, is_offered in stop['products'].items() if is_offered])
+                })
+                break
+
+            # break out of outer loop
+            if location.get('stop_id'):
+                break
 
         # make it explicit if we didn't find any stop that matches our expectations
         if not location.get('stop_id'):

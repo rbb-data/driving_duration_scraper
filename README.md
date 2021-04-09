@@ -127,41 +127,55 @@ Read the comments below that aim to help understanding the result:
 
 ### Usage
 
-The VBB Rest API needs stop ids to calculate trips. These are provided, as above, in a designated row of the input and output CSV files. If your CSV contains only `lat` and `lng`, you can call `VbbRestStopIds` to fetch the closest stop for you.
+The VBB Rest API needs stop ids to calculate trips. These are provided, as above, in a designated row of the input and output CSV files. If your CSV does not contain a `stop_id` column, you will a `lat` and `lng` and an `address`* column (where address can be a street address or city name), and use the `VbbRestStopIds` scraper to fetch the closest stop for you.
 
 If you CSVs already contain a `stop_id` column that can be consumed by the VBB Rest API, you can skip the next section.
 
+Warning, there's a rant following. If you don't want to skip it you're of course free to do so, but if you're wondering why this is kind of messy, please read on.
+
+I know, that address column is very annoying. I mean, a latitude and longitude can be of arbitrary precision, much more so than an address. Why does it need that? I don't know. I didn't write the API, and if I did I would have probably not written it the way it is written. But it's what's there and it's still very useful.
+
+On the other hand, there is another endpoint of the HAFAS engine - exposed as `stops/nearby` in the REST API - which unfortunately is not very reliable. If you just want to say "I have the name of a city, give me whatever is the main stop", then the `stops/reachable-from` endpoint, which is used by this scraper, has given better results.
+
 #### Figuring Out The Closest Stop
 
-Given the same `source.csv` as above:
+Given a CSV with slightly more information as the `source.csv` as above:
+
+```
+id,lat,lng,name,address
+1,52.5033,13.3848,Berlin,Stresemannstraße 70
+```
+
 
 ``` bash
 poetry run scrapy crawl VbbRestStopIds \
-  -a source_csv=examples/sources.csv \
+  -a source_csv=sources-with-address.csv \
   -o source_stops.csv
 ```
 
 Results in the following CSV:
 
 ```
-id,lat,lng,name,stop_id,stop_name,stop_lat,stop_lng,stop_distance,stop_products
-1,52.5033,13.3848,Berlin,900000012101,S Anhalter Bahnhof,52.504537,13.38208,230,"suburban,bus"
+id,lat,lng,name,address,stop_id,stop_duration,stop_name,stop_lat,stop_lng,stop_products
+1,52.5033,13.3848,Berlin,Stresemannstraße 70,900000012101,4,S Anhalter Bahnhof,52.504537,13.38208,"suburban,bus"
 ```
+
+Note that the `stop_duration` column gives you the walking distance estimated by the API.
 
 You can also tell the scraper to exclude some transit types (separated with `,`) when considering the closest stop. Available transit types are `suburban`, `subway`, `tram`, `bus`, `ferry`, `express` and `regional` (you can [read the API documentation](https://v5.vbb.transport.rest/api.html#get-journeys) for more information about what exactly these types mean):
 
 ``` bash
 poetry run scrapy crawl VbbRestStopIds \
-  -a source_csv=examples/sources.csv \
+  -a source_csv=sources-with-address.csv \
   -a excluded_products=suburban,bus \
   -o source_stops.csv
 ```
 
-Results in the following result, because Möckernbrücke offers a subway:
+Results in the following response, because Möckernbrücke offers a subway:
 
 ```
-id,lat,lng,name,stop_id,stop_name,stop_lat,stop_lng,stop_distance,stop_products
-1,52.5033,13.3848,Berlin,900000017104,U Möckernbrücke,52.498945,13.383257,495,"subway,bus"
+id,lat,lng,name,address,stop_id,stop_duration,stop_name,stop_lat,stop_lng,stop_products
+1,52.5033,13.3848,Berlin,Stresemannstraße 70,900000017104,11,U Möckernbrücke,52.498945,13.383257,"subway,bus"
 ```
 
 The CSV just generated can be used as input for the next scraper.
